@@ -1,13 +1,97 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Sunday NFL Scoreboard</title><style>
-:root{color-scheme:dark;font-family:Arial,Helvetica,sans-serif}*{box-sizing:border-box}body{margin:0;background:#071323;color:#f5f8ff}header{padding:18px 28px;background:linear-gradient(100deg,#00338d,#091a34 65%,#c60c30);display:flex;justify-content:space-between;align-items:center;gap:12px}h1{font-size:clamp(23px,3vw,44px);margin:0;letter-spacing:2px}.sub{color:#b4c9e9;font-size:13px}#status{font-size:13px;text-align:right}.toolbar{display:flex;gap:12px;align-items:center;padding:12px 25px;flex-wrap:wrap;background:#0c1b30}button,input{background:#162c4b;color:white;border:1px solid #35557b;border-radius:7px;padding:9px 12px}button{cursor:pointer}#games{padding:20px;display:grid;grid-template-columns:repeat(auto-fit,minmax(265px,1fr));gap:14px}.game{background:#11233c;border:1px solid #284260;border-radius:14px;padding:18px;min-height:165px}.game.bills{border:2px solid #e32248}.gamehead{display:flex;justify-content:space-between;font-size:12px;color:#abc2e4;margin-bottom:14px}.team{display:flex;align-items:center;gap:12px;margin:9px 0;font-size:20px;font-weight:bold}.team img{width:36px;height:36px;object-fit:contain}.score{margin-left:auto;font-size:28px}.muted{opacity:.6}.empty{padding:30px;text-align:center;color:#b6c6dc}.banner{display:none;position:fixed;inset:0;z-index:10;align-items:center;justify-content:center;flex-direction:column;background:radial-gradient(circle,#1253c4,#00338d 50%,#071323);animation:flash .55s alternate infinite}.banner.show{display:flex}.banner .buffalo{font-size:clamp(85px,14vw,220px);animation:charge .65s ease-in-out infinite alternate}.banner h2{font-size:clamp(38px,7vw,110px);margin:0;text-shadow:5px 6px #c60c30;text-align:center}.banner p{font-size:24px;letter-spacing:5px}@keyframes charge{from{transform:translateX(-28px) scale(.9)}to{transform:translateX(28px) scale(1.12)}}@keyframes flash{from{box-shadow:inset 0 0 0 12px #c60c30}to{box-shadow:inset 0 0 0 35px #fff}}footer{padding:12px 24px;color:#819ab9;font-size:12px}body.tv .toolbar,body.tv footer{display:none}body.tv #games{grid-template-columns:repeat(3,minmax(0,1fr))}body.tv .game{min-height:190px}body.tv header{position:sticky;top:0;z-index:2}body.tv #status{font-variant-numeric:tabular-nums}@media(max-width:600px){header{padding:14px}#games{padding:10px;gap:10px}.game{padding:12px}}
-</style></head><body><header><div><h1>🏈 NFL SUNDAY SCOREBOARD</h1><div class="sub">BUFFALO BILLS • LIVE GAME DAY</div></div><div id="status">Connecting…</div></header><div class="toolbar"><label>Game date <input id="date" type="date"></label><button id="today">Today</button><button id="fullscreen">TV fullscreen</button><button id="test">Test Bills touchdown 🎉</button><button id="autoscroll" aria-pressed="true">Auto-scroll: ON</button></div><main id="games"><div class="empty">Loading NFL games…</div></main><footer>Scores supplied by ESPN's public scoreboard endpoint (unofficial; availability and terms may change). Updates approximately every 30 seconds. Touchdown animation depends on play-by-play data and may be delayed or missed. Auto-scroll runs when the page is taller than the screen. Keep this page active and prevent your iPhone from sleeping while using AirPlay.</footer><div class="banner" id="banner"><div class="buffalo">🦬</div><h2>TOUCHDOWN<br>BUFFALO!</h2><p>LET'S GO BILLS!</p></div><script>
-const $=id=>document.getElementById(id);let seenPlay=null,initial=true,animationTimer=null;const today=()=>{const d=new Date();return [d.getFullYear(),String(d.getMonth()+1).padStart(2,'0'),String(d.getDate()).padStart(2,'0')].join('-')};$('date').value=today();$('today').onclick=()=>{$('date').value=today();seenPlay=null;initial=true;load()};$('date').onchange=()=>{seenPlay=null;initial=true;load()};$('fullscreen').onclick=()=>{document.body.classList.toggle('tv');if(!document.fullscreenElement)document.documentElement.requestFullscreen?.().catch(()=>{});else document.exitFullscreen?.()};$('test').onclick=celebrate;const scrollButton=$('autoscroll');let autoScroll=true,scrollDirection=1,scrollPauseUntil=performance.now()+4000,lastFrame=0;scrollButton.onclick=()=>{autoScroll=!autoScroll;scrollButton.textContent='Auto-scroll: '+(autoScroll?'ON':'OFF');scrollButton.setAttribute('aria-pressed',String(autoScroll));scrollPauseUntil=performance.now()+1500};function animateScroll(t){const dt=Math.min(60,t-(lastFrame||t));lastFrame=t;const maxScroll=Math.max(0,document.documentElement.scrollHeight-innerHeight);if(autoScroll&&maxScroll>3&&!document.hidden&&!$('banner').classList.contains('show')&&t>scrollPauseUntil){const pos=window.scrollY;if(scrollDirection>0&&pos>=maxScroll-2){scrollDirection=-1;scrollPauseUntil=t+3500}else if(scrollDirection<0&&pos<=2){scrollDirection=1;scrollPauseUntil=t+3500}else{window.scrollBy(0,scrollDirection*dt*0.026)}}requestAnimationFrame(animateScroll)}requestAnimationFrame(animateScroll);
-function celebrate(){scrollPauseUntil=performance.now()+13000;clearTimeout(animationTimer);$('banner').classList.add('show');animationTimer=setTimeout(()=>$('banner').classList.remove('show'),9000)}
-function safe(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
-function isBills(t){return t?.team?.abbreviation==='BUF'}
-function formatGame(event){const comp=event.competitions?.[0]||{},teams=comp.competitors||[],status=event.status||{},state=status.type?.state||'pre',time=status.type?.shortDetail||status.type?.description||'',bills=teams.some(isBills);const rows=teams.slice().sort((a,b)=>a.homeAway==='away'?-1:1).map(t=>`<div class="team ${state==='post'&&!t.winner?'muted':''}"><img src="${safe(t.team?.logo||'')}" alt=""><span>${safe(t.team?.abbreviation||t.team?.displayName)}</span><span class="score">${state==='pre'?'–':safe(t.score??'–')}</span></div>`).join('');return `<article class="game ${bills?'bills':''}"><div class="gamehead"><span>${safe(new Date(event.date).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'}))}</span><span>${safe(time)}</span></div>${rows}</article>`}
-async function load(){const date=$('date').value.replaceAll('-','');try{const url=`https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard?dates=${date}&limit=100`;const res=await fetch(url,{cache:'no-store'});if(!res.ok)throw Error(`HTTP ${res.status}`);const data=await res.json(),events=data.events||[];events.sort((a,b)=>new Date(a.date)-new Date(b.date));const oldHeight=document.documentElement.scrollHeight;const oldY=window.scrollY;$('games').innerHTML=events.length?events.map(formatGame).join(''):'<div class="empty">No NFL games scheduled for this date.</div>';if(oldY>0&&Math.abs(document.documentElement.scrollHeight-oldHeight)>4)window.scrollTo(0,Math.min(oldY,document.documentElement.scrollHeight-innerHeight));$('status').textContent=`${events.length} games • Updated ${new Date().toLocaleTimeString()}`;
-// Only trigger on a NEW Buffalo scoring play explicitly identified as a touchdown.
-const billsGame=events.find(e=>e.competitions?.[0]?.competitors?.some(isBills));const play=billsGame?.competitions?.[0]?.situation?.lastPlay;const desc=String(play?.text||'');const playId=play?.id||null;const isTD=Boolean(playId&&(/touchdown/i.test(desc))&&(/BUF|Buffalo|Bills/i.test(desc)||play?.team?.abbreviation==='BUF'));if(initial){seenPlay=playId;initial=false}else if(playId&&playId!==seenPlay){if(isTD)celebrate();seenPlay=playId}
-}catch(e){$('status').textContent='Connection issue • retrying';if(!$('games').querySelector('.game'))$('games').innerHTML=`<div class="empty">Unable to load live scores. ${safe(e.message)}. Try again shortly.</div>`}}load();setInterval(load,30000);
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Bills | NFL Sunday Scoreboard</title>
+<style>
+:root{--blue:#0754bb;--red:#ed173a;--ink:#05070d;--line:#465063}
+*{box-sizing:border-box}html,body{margin:0;background:var(--ink);color:#f5f7ff;font-family:Arial,Helvetica,sans-serif;overflow:hidden}
+header{height:19vh;min-height:118px;background:linear-gradient(115deg,#02050b 5%,#0a1c40 62%,#080b12 100%);border-bottom:3px solid #145fe1;display:flex;align-items:center;justify-content:space-between;padding:12px 3%;position:relative;overflow:hidden}
+header:after{content:"";position:absolute;bottom:0;left:0;width:100%;height:4px;background:linear-gradient(90deg,#ed173a,#125fe8,#ed173a)}
+.heading{font-weight:1000;font-style:italic;letter-spacing:-1px;line-height:.95;font-size:clamp(25px,3.8vw,70px);text-shadow:2px 3px #111}
+.heading span{display:block;color:#f12745}.brand{display:flex;align-items:center;gap:20px;font-size:clamp(22px,3vw,54px);font-weight:900;font-style:italic}
+.brand img{width:clamp(85px,12vw,210px);filter:drop-shadow(0 0 8px #2779ff)}
+.toolbar{height:38px;display:flex;align-items:center;gap:16px;padding:0 2%;background:#0b1220;font-size:13px}
+.toolbar button{background:#16294b;border:1px solid #4969a0;color:white;border-radius:5px;padding:5px 10px;cursor:pointer}
+.toolbar .status{margin-left:auto;color:#a9bad6}
+.viewport{height:calc(81vh - 80px);overflow:hidden;position:relative;padding:12px 2.5%}
+.grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;align-content:start}
+.game{min-height:140px;border:1px solid #586277;border-radius:5px;background:linear-gradient(145deg,#111721,#05080d);box-shadow:inset 0 0 0 1px #161d29;display:grid;grid-template-columns:minmax(0,1fr) 80px;padding:12px 14px;gap:8px}
+.game.bills{border:3px solid #ff244e;box-shadow:0 0 14px #e6194d80}
+.teams{display:grid;grid-template-rows:1fr 1fr;gap:5px}.team{display:flex;align-items:center;gap:10px;min-width:0}
+.team img{height:42px;width:55px;object-fit:contain}.abbr{font-size:clamp(19px,2.3vw,39px);font-weight:900;flex:1}.score{font-size:clamp(31px,3.7vw,62px);font-weight:1000;font-variant-numeric:tabular-nums;letter-spacing:-2px}
+.gameinfo{border-left:1px solid #697183;text-align:center;display:flex;flex-direction:column;justify-content:center;font-size:clamp(14px,1.35vw,24px);font-weight:700;gap:7px}
+.gameinfo small{font-size:12px;color:#abbad2}.gameinfo .clock{font-size:clamp(17px,2vw,30px)}
+footer{height:42px;display:flex;align-items:center;background:#080d18;border-top:2px solid #0d56c7;gap:14px;padding:0 2%;font-weight:800;overflow:hidden;white-space:nowrap}
+footer strong{color:#f02848}#ticker{color:#d8e3f7;font-size:14px;overflow:hidden;text-overflow:ellipsis}
+.overlay{position:fixed;inset:0;display:none;align-items:center;justify-content:center;flex-direction:column;z-index:20;background:radial-gradient(circle,#1748a5 0%,#050b22 50%,#000 100%);overflow:hidden}
+.overlay.active{display:flex;animation:flashBg .55s infinite alternate}
+.overlay:before,.overlay:after{content:"";position:absolute;inset:-70%;background:conic-gradient(from 0deg,transparent 0deg,#ed163b88 18deg,transparent 35deg,#145fff88 80deg,transparent 100deg);animation:spin 3s linear infinite}
+.overlay:after{animation-direction:reverse;animation-duration:4s;opacity:.65}
+.overlay img{position:relative;z-index:2;width:min(70vw,700px);max-height:52vh;object-fit:contain;filter:drop-shadow(0 0 35px #fff) drop-shadow(0 0 60px #145aff);animation:buffaloPulse .42s infinite alternate}
+.overlay h1{z-index:2;position:relative;margin:0;font-size:clamp(38px,8vw,145px);font-style:italic;text-align:center;text-shadow:0 0 20px #ed1741,4px 5px #041b57;line-height:1.05}
+.overlay p{z-index:2;font-size:clamp(18px,2.4vw,35px);letter-spacing:8px;font-weight:900}
+@keyframes flashBg{from{box-shadow:inset 0 0 180px #ed173a}to{box-shadow:inset 0 0 200px #075fff}}
+@keyframes buffaloPulse{from{transform:scale(.94);opacity:.8}to{transform:scale(1.08);opacity:1}}
+@keyframes spin{to{transform:rotate(360deg)}}
+@media(max-width:850px){header{min-height:100px}.brand{gap:4px}.game{min-height:118px;grid-template-columns:minmax(0,1fr) 55px;padding:8px}.team img{width:33px;height:34px}.team{gap:3px}.grid{gap:8px}.gameinfo{font-size:12px}.gameinfo .clock{font-size:15px}}
+</style></head>
+<body><header><div class="heading">NFL SUNDAY<span>SCOREBOARD</span></div><div class="brand"><img src="https://a.espncdn.com/i/teamlogos/nfl/500/buf.png" alt="Buffalo Bills">BUFFALO<br>BILLS</div></header>
+<div class="toolbar"><button id="today">TODAY</button><button id="full">TV FULLSCREEN</button><button id="test">TEST BILLS TD 🎉</button><span class="status" id="status">Loading NFL games…</span></div>
+<div class="viewport" id="viewport"><div class="grid" id="grid"></div></div>
+<footer><strong>NFL SUNDAY</strong><span id="ticker">Live NFL scoreboard • Updated every 30 seconds</span></footer>
+<div class="overlay" id="overlay"><img src="https://a.espncdn.com/i/teamlogos/nfl/500/buf.png" alt="Buffalo Bills"><h1>TOUCHDOWN<br>BUFFALO!</h1><p>LET'S GO BILLS!</p></div>
+<script>
+const API='https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard';
+const $=id=>document.getElementById(id);
+let selectedDate=null, games=[], lastPlayIds=new Set(), initialized=false, celebrating=false;
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fmtDate=d=>`${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}`;
+function sundayDate(){const d=new Date();d.setDate(d.getDate()+((7-d.getDay())%7));return d}
+function logo(team){return team?.logo||`https://a.espncdn.com/i/teamlogos/nfl/500/${team?.abbreviation?.toLowerCase()||'nfl'}.png`}
+function displayGame(event){
+ const c=event.competitions?.[0];if(!c)return '';
+ const cs=c.competitors||[];const home=cs.find(x=>x.homeAway==='home')||cs[0],away=cs.find(x=>x.homeAway==='away')||cs[1];if(!home||!away)return '';
+ const bills=cs.some(x=>x.team?.abbreviation==='BUF');
+ const state=event.status?.type?.state||'pre';
+ const score=x=>state==='pre'?'—':esc(x.score??'0');
+ const team=x=>`<div class="team"><img loading="lazy" src="${esc(logo(x.team))}" alt=""><span class="abbr">${esc(x.team?.abbreviation||'')}</span><span class="score">${score(x)}</span></div>`;
+ const info=state==='pre'?`<div>${new Date(event.date).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit',timeZone:'America/New_York'})}</div><small>ET</small>`:
+ state==='post'?'<div>FINAL</div>':`<div>${esc(event.status?.period||'')}${ordinal(event.status?.period)} QTR</div><div class="clock">${esc(event.status?.displayClock||'')}</div>`;
+ return `<article class="game ${bills?'bills':''}"><div class="teams">${team(away)}${team(home)}</div><div class="gameinfo">${info}</div></article>`;
+}
+function ordinal(n){return n===1?'st':n===2?'nd':n===3?'rd':'th'}
+function render(){const sorted=[...games].sort((a,b)=>new Date(a.date)-new Date(b.date));$('grid').innerHTML=sorted.map(displayGame).join('')||'<div>No NFL games scheduled for this date.</div>';$('ticker').textContent=sorted.map(e=>{const c=e.competitions?.[0],t=c?.competitors||[];return t.length===2?`${t[0].team.abbreviation} ${t[0].score||'—'}  •  ${t[1].team.abbreviation} ${t[1].score||'—'}`:''}).join('    |    ')}
+function billEvents(){return games.filter(e=>e.competitions?.[0]?.competitors?.some(c=>c.team?.abbreviation==='BUF'))}
+async function checkBillsPlays(){
+ for(const e of billEvents()){
+  if(e.status?.type?.state!=='in')continue;
+  try{
+   const r=await fetch(`https://site.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=${encodeURIComponent(e.id)}`,{cache:'no-store'});
+   if(!r.ok)continue;const data=await r.json();
+   const plays=data.scoringPlays||[];
+   for(const p of plays){
+    const id=String(p.id||p.play?.id||`${e.id}-${p.clock?.displayValue}-${p.text}`);
+    const isTD=/touchdown/i.test(p.text||p.play?.text||'');
+    const isBills=p.team?.abbreviation==='BUF'||p.team?.id==='2';
+    if(initialized&&!lastPlayIds.has(id)&&isTD&&isBills)celebrate();
+    lastPlayIds.add(id);
+   }
+  }catch(err){console.warn('Play data unavailable',err)}
+ }
+ initialized=true;
+}
+async function refresh(){
+ try{
+  const d=selectedDate||fmtDate(sundayDate());
+  const r=await fetch(`${API}?dates=${d}&limit=100`,{cache:'no-store'});if(!r.ok)throw new Error('HTTP '+r.status);
+  const data=await r.json();games=data.events||[];render();$('status').textContent=`${games.length} games • Updated ${new Date().toLocaleTimeString('en-US')}`;
+  await checkBillsPlays();
+ }catch(e){$('status').textContent='Live data unavailable — retrying';console.warn(e)}
+}
+let animationTimer;
+function celebrate(){if(celebrating)return;celebrating=true;$('overlay').classList.add('active');clearTimeout(animationTimer);animationTimer=setTimeout(()=>{$('overlay').classList.remove('active');celebrating=false},11000)}
+$('test').onclick=celebrate;$('today').onclick=()=>{selectedDate=fmtDate(new Date());initialized=false;lastPlayIds.clear();refresh()};
+$('full').onclick=()=>{if(document.fullscreenElement)document.exitFullscreen?.();else document.documentElement.requestFullscreen?.()};
+let scrollDir=1,last=performance.now();const view=$('viewport');
+function animate(t){const dt=Math.min(t-last,50);last=t;if(!celebrating&&view.scrollHeight>view.clientHeight+4){view.scrollTop+=scrollDir*dt*.017;if(view.scrollTop>=view.scrollHeight-view.clientHeight-2)scrollDir=-1;if(view.scrollTop<=1)scrollDir=1}requestAnimationFrame(animate)}
+requestAnimationFrame(animate);refresh();setInterval(refresh,30000);
 </script></body></html>
