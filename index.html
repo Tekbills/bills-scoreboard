@@ -1,3 +1,4 @@
+
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Bills | NFL Sunday Scoreboard</title>
@@ -13,11 +14,11 @@ header:after{content:"";position:absolute;bottom:0;left:0;width:100%;height:4px;
 .toolbar button{background:#16294b;border:1px solid #4969a0;color:white;border-radius:5px;padding:5px 10px;cursor:pointer}
 .toolbar .status{margin-left:auto;color:#a9bad6}
 .viewport{height:calc(81vh - 80px);overflow:hidden;position:relative;padding:12px 2.5%}
-.grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;align-content:start}
-.game{min-height:140px;border:1px solid #586277;border-radius:5px;background:linear-gradient(145deg,#111721,#05080d);box-shadow:inset 0 0 0 1px #161d29;display:grid;grid-template-columns:minmax(0,1fr) 80px;padding:12px 14px;gap:8px}
+.grid{height:100%;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));grid-template-rows:repeat(2,minmax(0,1fr));gap:12px;align-content:stretch}
+.game{min-height:0;border:1px solid #586277;border-radius:5px;background:linear-gradient(145deg,#111721,#05080d);box-shadow:inset 0 0 0 1px #161d29;display:grid;grid-template-columns:minmax(0,1fr) 80px;padding:12px 14px;gap:8px}
 .game.bills{border:3px solid #ff244e;box-shadow:0 0 14px #e6194d80}
 .teams{display:grid;grid-template-rows:1fr 1fr;gap:5px}.team{display:flex;align-items:center;gap:10px;min-width:0}
-.team img{height:42px;width:55px;object-fit:contain}.abbr{font-size:clamp(19px,2.3vw,39px);font-weight:900;flex:1}.score{font-size:clamp(31px,3.7vw,62px);font-weight:1000;font-variant-numeric:tabular-nums;letter-spacing:-2px}
+.team img{height:clamp(38px,5.5vh,76px);width:clamp(44px,5.5vw,90px);object-fit:contain}.abbr{font-size:clamp(20px,2.6vw,48px);font-weight:900;flex:1}.score{font-size:clamp(40px,4.5vw,86px);font-weight:1000;font-variant-numeric:tabular-nums;letter-spacing:-2px}
 .gameinfo{border-left:1px solid #697183;text-align:center;display:flex;flex-direction:column;justify-content:center;font-size:clamp(14px,1.35vw,24px);font-weight:700;gap:7px}
 .gameinfo small{font-size:12px;color:#abbad2}.gameinfo .clock{font-size:clamp(17px,2vw,30px)}
 footer{height:42px;display:flex;align-items:center;background:#080d18;border-top:2px solid #0d56c7;gap:14px;padding:0 2%;font-weight:800;overflow:hidden;white-space:nowrap}
@@ -32,7 +33,7 @@ footer strong{color:#f02848}#ticker{color:#d8e3f7;font-size:14px;overflow:hidden
 @keyframes flashBg{from{box-shadow:inset 0 0 180px #ed173a}to{box-shadow:inset 0 0 200px #075fff}}
 @keyframes buffaloPulse{from{transform:scale(.94);opacity:.8}to{transform:scale(1.08);opacity:1}}
 @keyframes spin{to{transform:rotate(360deg)}}
-@media(max-width:850px){header{min-height:100px}.brand{gap:4px}.game{min-height:118px;grid-template-columns:minmax(0,1fr) 55px;padding:8px}.team img{width:33px;height:34px}.team{gap:3px}.grid{gap:8px}.gameinfo{font-size:12px}.gameinfo .clock{font-size:15px}}
+@media(max-width:850px){.grid{grid-template-columns:repeat(2,minmax(0,1fr));grid-template-rows:repeat(2,minmax(0,1fr))}header{min-height:100px}.brand{gap:4px}.game{min-height:0;grid-template-columns:minmax(0,1fr) 55px;padding:8px}.team img{width:33px;height:34px}.team{gap:3px}.grid{gap:8px}.gameinfo{font-size:12px}.gameinfo .clock{font-size:15px}}
 </style></head>
 <body><header><div class="heading"><img class="nfl-mark" src="https://upload.wikimedia.org/wikipedia/en/a/a2/National_Football_League_logo.svg" alt="NFL logo"><div class="heading-copy"><div>SUNDAY</div><span>SCOREBOARD</span></div></div><div class="brand"><img src="https://a.espncdn.com/i/teamlogos/nfl/500/buf.png" alt="Buffalo Bills">BUFFALO<br>BILLS</div></header>
 <div class="toolbar"><button id="today">TODAY</button><button id="full">TV FULLSCREEN</button><button id="test">TEST BILLS TD 🎉</button><span class="status" id="status">Loading NFL games…</span></div>
@@ -42,7 +43,7 @@ footer strong{color:#f02848}#ticker{color:#d8e3f7;font-size:14px;overflow:hidden
 <script>
 const API='https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard';
 const $=id=>document.getElementById(id);
-let selectedDate=null, games=[], lastPlayIds=new Set(), initialized=false, celebrating=false;
+let selectedDate=null, games=[], lastPlayIds=new Set(), initialized=false, celebrating=false, pageIndex=0;
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const fmtDate=d=>`${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}`;
 function sundayDate(){const d=new Date();d.setDate(d.getDate()+((7-d.getDay())%7));return d}
@@ -59,7 +60,18 @@ function displayGame(event){
  return `<article class="game ${bills?'bills':''}"><div class="teams">${team(away)}${team(home)}</div><div class="gameinfo">${info}</div></article>`;
 }
 function ordinal(n){return n===1?'st':n===2?'nd':n===3?'rd':'th'}
-function render(){const sorted=[...games].sort((a,b)=>new Date(a.date)-new Date(b.date));$('grid').innerHTML=sorted.map(displayGame).join('')||'<div>No NFL games scheduled for this date.</div>';$('ticker').textContent=sorted.map(e=>{const c=e.competitions?.[0],t=c?.competitors||[];return t.length===2?`${t[0].team.abbreviation} ${t[0].score||'—'}  •  ${t[1].team.abbreviation} ${t[1].score||'—'}`:''}).join('    |    ')}
+function pageCapacity(){return window.innerWidth<=850?4:6}
+function render(){
+ const sorted=[...games].sort((a,b)=>new Date(a.date)-new Date(b.date));
+ const capacity=pageCapacity(), pages=Math.max(1,Math.ceil(sorted.length/capacity));
+ pageIndex=pageIndex%pages;
+ const visible=sorted.slice(pageIndex*capacity,(pageIndex+1)*capacity);
+ $('grid').innerHTML=visible.map(displayGame).join('')||'<div>No NFL games scheduled for this date.</div>';
+ $('ticker').textContent=`PAGE ${pageIndex+1}/${pages} • ROTATES EVERY 5 SEC     |     `+sorted.map(e=>{const c=e.competitions?.[0],t=c?.competitors||[];return t.length===2?`${t[0].team.abbreviation} ${t[0].score||'—'}  •  ${t[1].team.abbreviation} ${t[1].score||'—'}`:''}).join('    |    ');
+}
+function nextPage(){if(celebrating||!games.length)return;pageIndex=(pageIndex+1)%Math.max(1,Math.ceil(games.length/pageCapacity()));render()}
+window.addEventListener('resize',render);
+
 function billEvents(){return games.filter(e=>e.competitions?.[0]?.competitors?.some(c=>c.team?.abbreviation==='BUF'))}
 async function checkBillsPlays(){
  for(const e of billEvents()){
@@ -91,7 +103,5 @@ let animationTimer;
 function celebrate(){if(celebrating)return;celebrating=true;$('overlay').classList.add('active');clearTimeout(animationTimer);animationTimer=setTimeout(()=>{$('overlay').classList.remove('active');celebrating=false},11000)}
 $('test').onclick=celebrate;$('today').onclick=()=>{selectedDate=fmtDate(new Date());initialized=false;lastPlayIds.clear();refresh()};
 $('full').onclick=()=>{if(document.fullscreenElement)document.exitFullscreen?.();else document.documentElement.requestFullscreen?.()};
-let scrollDir=1,last=performance.now();const view=$('viewport');
-function animate(t){const dt=Math.min(t-last,50);last=t;if(!celebrating&&view.scrollHeight>view.clientHeight+4){view.scrollTop+=scrollDir*dt*.017;if(view.scrollTop>=view.scrollHeight-view.clientHeight-2)scrollDir=-1;if(view.scrollTop<=1)scrollDir=1}requestAnimationFrame(animate)}
-requestAnimationFrame(animate);refresh();setInterval(refresh,30000);
+refresh();setInterval(refresh,30000);setInterval(nextPage,5000);
 </script></body></html>
